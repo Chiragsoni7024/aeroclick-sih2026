@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-const AeroclickLogo = ({ size = 48 }) => (
-  <svg width={size} height={size} viewBox="0 0 100 100" style={{ borderRadius: '50%', boxShadow: '0 4px 12px rgba(0,32,91,0.3)', background: '#00205b', flexShrink: 0 }}>
+const AeroclickLogo = ({ size = 46 }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" style={{ borderRadius: '50%', boxShadow: '0 4px 16px rgba(0,32,91,0.35)', background: '#00205b', flexShrink: 0 }}>
     <circle cx="50" cy="50" r="48" fill="#00205b" stroke="#38bdf8" strokeWidth="3"/>
     <path d="M25 58 L72 36 L52 68 L42 53 L28 58 Z" fill="#ffffff" />
     <path d="M48 48 L60 38 L55 52 Z" fill="#cbd5e1" />
@@ -10,11 +10,7 @@ const AeroclickLogo = ({ size = 48 }) => (
 );
 
 export default function App() {
-  const [authRole, setAuthRole] = useState(null);
-  const [selectedRoleType, setSelectedRoleType] = useState('consumer');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const [activePortal, setActivePortal] = useState('consumer');
 
   const [govtData, setGovtData] = useState(null);
   const [consumerData, setConsumerData] = useState(null);
@@ -36,193 +32,75 @@ export default function App() {
   const [predDays, setPredDays] = useState(7);
   const [aiResult, setAiResult] = useState(null);
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    fetch('http://127.0.0.1:/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, role: selectedRoleType })
-    })
-      .then(res => {
-        if (!res.ok) throw new Error("Invalid credentials");
-        return res.json();
-      })
-      .then(data => {
-        setAuthRole(data.role);
-        setLoginError('');
-      })
-      .catch(err => setLoginError('Access Denied: Use traveler / aeroclick123 or mospi_officer / sih2026govt'));
-  };
-
   useEffect(() => {
-    if (authRole === 'govt') {
-      fetch(`http://127.0.0.1:/api/terminal/government-analytics?destination=${selectedDestination}`)
+    if (activePortal === 'govt') {
+      fetch(`http://127.0.0.1:5000/api/terminal/government-analytics?destination=${selectedDestination}`)
         .then(res => res.json())
-        .then(d => setGovtData(d));
-    } else if (authRole === 'consumer') {
-      fetch('http://127.0.0.1:/api/terminal/consumer-market')
+        .then(d => setGovtData(d))
+        .catch(err => console.log("Govt API Error:", err));
+    } else if (activePortal === 'consumer') {
+      fetch('http://127.0.0.1:5000/api/terminal/consumer-market')
         .then(res => res.json())
-        .then(d => setConsumerData(d));
+        .then(d => setConsumerData(d))
+        .catch(err => console.log("Consumer Market Error:", err));
 
-      fetch('http://127.0.0.1:/api/terminal/records?limit=25')
+      fetch('http://127.0.0.1:5000/api/terminal/records?limit=25')
         .then(res => res.json())
-        .then(r => setFlightRecords(r));
+        .then(r => setFlightRecords(r))
+        .catch(err => console.log("Flight Records Error:", err));
     }
-  }, [authRole, selectedDestination]);
+  }, [activePortal, selectedDestination]);
 
   const runComparison = () => {
-    fetch(`http://127.0.0.1:/api/consumer/compare-fares?origin=${compOrigin}&destination=${compDest}&travel_date=${compDate}`)
+    fetch(`http://127.0.0.1:5000/api/consumer/compare-fares?origin=${compOrigin}&destination=${compDest}&travel_date=${compDate}`)
       .then(res => res.json())
-      .then(d => setComparisonResult(d));
+      .then(d => setComparisonResult(d))
+      .catch(err => console.log("Comparison Error:", err));
   };
 
   const runAIPrediction = () => {
-    fetch(`http://127.0.0.1:/api/ai/predict?origin=${predOrigin}&destination=${predDest}&days_ahead=${predDays}`)
+    fetch(`http://127.0.0.1:5000/api/ai/predict?origin=${predOrigin}&destination=${predDest}&days_ahead=${predDays}`)
       .then(res => res.json())
-      .then(d => setAiResult(d));
+      .then(d => setAiResult(d))
+      .catch(err => console.log("AI Predictor Error:", err));
   };
 
-  // --- LANDING FRONT PAGE WITH AIRCRAFT WALLPAPER ---
-  if (!authRole) {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', color: '#00205b', fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <div style={{ backgroundColor: '#00205b', color: '#ffffff', padding: '16px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <AeroclickLogo size={46} />
-            <div>
-              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '900', letterSpacing: '0.5px' }}>AEROCLICK</h2>
-              <span style={{ fontSize: '12px', color: '#38bdf8', fontWeight: '600' }}>Smart India Hackathon 2026 | ID 26056</span>
-            </div>
-          </div>
-          <div style={{ fontSize: '13px', color: '#cbd5e1', fontWeight: '600' }}>
-            Ministry of Statistics & Programme Implementation (MoSPI)
-          </div>
-        </div>
-
-        <div style={{ 
-          backgroundImage: 'linear-gradient(rgba(0, 32, 91, 0.88), rgba(0, 16, 48, 0.92)), url("https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?q=80&w=1600&auto=format&fit=crop")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          color: '#ffffff',
-          padding: '90px 40px',
-          textAlign: 'center'
-        }}>
-          <h1 style={{ margin: 0, fontSize: '42px', fontWeight: '900', letterSpacing: '-0.5px' }}>Real-Time Airfare Intelligence & Cross-Platform Comparison Engine</h1>
-          <p style={{ margin: '16px auto 0 auto', maxWidth: '800px', fontSize: '16px', color: '#cbd5e1', lineHeight: '1.6' }}>
-            Aeroclick bridges official government macroeconomic CPI tracking with a robust consumer fare comparison engine, tracking live unbundled flights across major airlines and OTA aggregators seamlessly.
-          </p>
-        </div>
-
-        <div style={{ maxWidth: '1200px', margin: '-40px auto 40px auto', padding: '0 20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', position: 'relative', zIndex: 10 }}>
-          <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', borderTop: '4px solid #00205b' }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#00205b', fontWeight: '800' }}>🔍 Multi-Source Fare Compare</h3>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.5' }}>Compare direct airline websites and OTA aggregators (MMT, Yatra, EaseMyTrip, Cleartrip) instantly.</p>
-          </div>
-          <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', borderTop: '4px solid #0284c7' }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#00205b', fontWeight: '800' }}>🤖 AI Corridor Predictor</h3>
-            <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#64748b', lineHeight: '1.5' }}>Advanced machine learning corridor forecasting with smart buying advice and price anomaly detection.</p>
-          </div>
-          <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', borderTop: '4px solid #16a34a' }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#00205b', fontWeight: '800' }}>⚡ Real-Time Live CPI</h3>
-            <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#64748b', lineHeight: '1.5' }}>MoSPI government officer portal with multi-timeframe interactive inflation trend graphs and audit logs.</p>
-          </div>
-        </div>
-
-        <div style={{ maxWidth: '460px', margin: '20px auto 60px auto', backgroundColor: '#ffffff', padding: '36px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px rgba(0,32,91,0.08)' }}>
-          <div style={{ textAlign: 'center', marginBottom: '22px' }}>
-            <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '900', color: '#00205b' }}>Secure Terminal Gateway</h2>
-            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>Select your portal to access live analytics</p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', backgroundColor: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
-            <button 
-              type="button"
-              onClick={() => setSelectedRoleType('consumer')}
-              style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', backgroundColor: selectedRoleType === 'consumer' ? '#00205b' : 'transparent', color: selectedRoleType === 'consumer' ? '#ffffff' : '#64748b', fontWeight: '700', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
-            >
-              Consumer Portal
-            </button>
-            <button 
-              type="button"
-              onClick={() => setSelectedRoleType('govt')}
-              style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', backgroundColor: selectedRoleType === 'govt' ? '#00205b' : 'transparent', color: selectedRoleType === 'govt' ? '#ffffff' : '#64748b', fontWeight: '700', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}
-            >
-              MoSPI Officer Portal
-            </button>
-          </div>
-
-          {loginError && <div style={{ backgroundColor: '#fee2e2', color: '#991b1b', padding: '10px 14px', borderRadius: '6px', fontSize: '12px', marginBottom: '16px', fontWeight: '600' }}>{loginError}</div>}
-
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div>
-              <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Username</label>
-              <input 
-                type="text" 
-                value={username} 
-                onChange={(e) => setUsername(e.target.value)} 
-                placeholder={selectedRoleType === 'govt' ? 'mospi_officer' : 'traveler'}
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#00205b', fontSize: '14px', boxSizing: 'border-box', outline: 'none', fontWeight: '600' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Password</label>
-              <input 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                placeholder="Enter password"
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', color: '#00205b', fontSize: '14px', boxSizing: 'border-box', outline: 'none', fontWeight: '600' }}
-              />
-            </div>
-            <button 
-              type="submit"
-              style={{ width: '100%', padding: '14px', borderRadius: '8px', border: 'none', backgroundColor: '#00205b', color: 'white', fontWeight: '800', cursor: 'pointer', fontSize: '14px', marginTop: '6px', boxShadow: '0 4px 12px rgba(0,32,91,0.3)' }}
-            >
-              Secure Portal Login →
-            </button>
-          </form>
-
-          <div style={{ marginTop: '20px', fontSize: '12px', color: '#64748b', textAlign: 'center', lineHeight: '1.6', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
-            Consumer Demo: <code style={{ color: '#00205b', fontWeight: '700' }}>traveler / aeroclick123</code><br/>
-            MoSPI Officer Demo: <code style={{ color: '#00205b', fontWeight: '700' }}>mospi_officer / sih2026govt</code>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- MoSPI OFFICER PORTAL (UNALTERED CPI SECTION + ALL 15 ADDITIONAL FEATURES) ---
-  if (authRole === 'govt') {
+  // --- MoSPI OFFICER PORTAL (BLS / GOVERNMENT INSTITUTIONAL GRADE) ---
+  if (activePortal === 'govt') {
     const activeDataset = govtData ? govtData.cpi_timeframe_datasets[cpiTimeframe] : [];
 
     return (
-      <div style={{ backgroundColor: '#f8fafc', color: '#00205b', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <div style={{ backgroundColor: '#f8fafc', color: '#0f172a', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
         
-        <div style={{ backgroundColor: '#00205b', color: '#ffffff', padding: '16px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <AeroclickLogo size={42} />
+        {/* Institutional Top Navbar */}
+        <div style={{ backgroundColor: '#001e43', color: '#ffffff', padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #0284c7' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <AeroclickLogo size={44} />
             <div>
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '900', letterSpacing: '0.5px' }}>AEROCLICK // MoSPI OFFICER PORTAL</h2>
-              <span style={{ fontSize: '12px', color: '#38bdf8' }}>Real-Time Live CPI & Transport Basket Macroeconomic Dashboard</span>
+              <div style={{ fontSize: '11px', color: '#38bdf8', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase' }}>Ministry of Statistics & Programme Implementation (MoSPI)</div>
+              <h2 style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: '900', letterSpacing: '0.3px' }}>AEROCLICK ENTERPRISE MACROECONOMIC TERMINAL // v18.0</h2>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#1e3a8a', padding: '6px 12px', borderRadius: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#0f2952', padding: '6px 14px', borderRadius: '6px', border: '1px solid #1e3a8a' }}>
               <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: '800' }}>FILTER ROUTE:</span>
               <select 
                 value={selectedDestination} 
                 onChange={(e) => setSelectedDestination(e.target.value)}
                 style={{ backgroundColor: '#ffffff', color: '#00205b', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '700', outline: 'none', cursor: 'pointer' }}
               >
-                <option value="All">All Destinations</option>
+                <option value="All">All National Corridors</option>
                 <option value="Mumbai">Mumbai</option>
                 <option value="Goa">Goa</option>
                 <option value="Bengaluru">Bengaluru</option>
                 <option value="Delhi">Delhi</option>
               </select>
             </div>
-            <button onClick={() => setAuthRole(null)} style={{ backgroundColor: '#dc2626', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}>
-              Logout Portal
+            <button 
+              onClick={() => setActivePortal('consumer')} 
+              style={{ backgroundColor: '#0284c7', color: 'white', border: 'none', padding: '9px 18px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '12px', boxShadow: '0 4px 12px rgba(2,132,199,0.3)' }}
+            >
+              Switch to Consumer Portal →
             </button>
           </div>
         </div>
@@ -230,45 +108,81 @@ export default function App() {
         <div style={{ padding: '36px', maxWidth: '1280px', margin: '0 auto' }}>
           {govtData ? (
             <>
-              {/* EXACT UNALTERED CPI CENTER STAGE HERO METRICS */}
-              <div style={{ backgroundColor: '#00205b', color: '#ffffff', padding: '30px', borderRadius: '16px', marginBottom: '28px', boxShadow: '0 10px 25px rgba(0,32,91,0.2)', border: '1px solid #1e3a8a' }}>
+              {/* INSTITUTIONAL SUB-HEADER SECTION */}
+              <div style={{ backgroundColor: '#ffffff', padding: '24px 30px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Consumer Price Index (CPI) Publications & Methodology</span>
+                <h1 style={{ margin: '6px 0 8px 0', fontSize: '22px', fontWeight: '900', color: '#001e43' }}>Measuring Price Change in the CPI: Airline Fares & Public Transport Basket</h1>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.6' }}>
+                  The Consumer Price Index includes scheduled domestic and commercial airline fares as a primary component of transport inflation. Below is the live relative importance weighting, APIx index, and real-time augmented basket tracking.
+                </p>
+              </div>
+
+              {/* CPI CENTER STAGE HERO METRICS */}
+              <div style={{ backgroundColor: '#001e43', color: '#ffffff', padding: '30px', borderRadius: '16px', marginBottom: '24px', boxShadow: '0 10px 30px rgba(0,30,67,0.25)', border: '1px solid #1e3a8a' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <div>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1px' }}>MoSPI Core Augmentation Engine</span>
-                    <h2 style={{ margin: '5px 0 0 0', fontSize: '24px', fontWeight: '900' }}>Live Consumer Price Index (CPI) Center Stage</h2>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1px' }}>MoSPI Core Augmentation Engine</span>
+                    <h2 style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: '900' }}>Live Consumer Price Index (CPI) Center Stage</h2>
                   </div>
-                  <span style={{ backgroundColor: '#16a34a', color: 'white', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '800' }}>● LIVE SYNCHRONIZED</span>
+                  <span style={{ backgroundColor: '#16a34a', color: 'white', padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px' }}>● LIVE SYNCHRONIZED FEED</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-                  <div style={{ backgroundColor: '#1e3a8a', padding: '18px', borderRadius: '10px' }}>
-                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: '700', textTransform: 'uppercase' }}>Real-Time Augmented CPI</span>
-                    <h2 style={{ margin: '6px 0 0 0', fontSize: '28px', fontWeight: '900', color: '#ffffff' }}>{govtData.macro_cpi_metrics.airfare_augmented_cpi}</h2>
-                    <span style={{ fontSize: '11px', color: '#34d399' }}>Base CPI: {govtData.macro_cpi_metrics.baseline_cpi}</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                  <div style={{ backgroundColor: '#0f2952', padding: '18px', borderRadius: '10px', border: '1px solid #1e3a8a' }}>
+                    <span style={{ fontSize: '10px', color: '#93c5fd', fontWeight: '800', textTransform: 'uppercase' }}>Real-Time Augmented CPI</span>
+                    <h2 style={{ margin: '6px 0 2px 0', fontSize: '26px', fontWeight: '900', color: '#ffffff' }}>{govtData.macro_cpi_metrics.airfare_augmented_cpi}</h2>
+                    <span style={{ fontSize: '11px', color: '#34d399', fontWeight: '600' }}>Base CPI: {govtData.macro_cpi_metrics.baseline_cpi}</span>
                   </div>
-                  <div style={{ backgroundColor: '#1e3a8a', padding: '18px', borderRadius: '10px' }}>
-                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: '700', textTransform: 'uppercase' }}>National Airfare Index (APIx)</span>
-                    <h2 style={{ margin: '6px 0 0 0', fontSize: '28px', fontWeight: '900', color: '#ffffff' }}>{govtData.macro_cpi_metrics.national_airfare_index}</h2>
-                    <span style={{ fontSize: '11px', color: '#38bdf8' }}>{govtData.comparison_periods['30_days_change']} MoM</span>
+                  <div style={{ backgroundColor: '#0f2952', padding: '18px', borderRadius: '10px', border: '1px solid #1e3a8a' }}>
+                    <span style={{ fontSize: '10px', color: '#93c5fd', fontWeight: '800', textTransform: 'uppercase' }}>National Airfare Index (APIx)</span>
+                    <h2 style={{ margin: '6px 0 2px 0', fontSize: '26px', fontWeight: '900', color: '#ffffff' }}>{govtData.macro_cpi_metrics.national_airfare_index}</h2>
+                    <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: '600' }}>{govtData.comparison_periods['30_days_change']} MoM</span>
                   </div>
-                  <div style={{ backgroundColor: '#1e3a8a', padding: '18px', borderRadius: '10px' }}>
-                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: '700', textTransform: 'uppercase' }}>Transport Basket Weight</span>
-                    <h2 style={{ margin: '6px 0 0 0', fontSize: '28px', fontWeight: '900', color: '#ffffff' }}>{govtData.macro_cpi_metrics.transport_basket_weight}</h2>
-                    <span style={{ fontSize: '11px', color: '#fbbf24' }}>Official MoSPI Allocation</span>
+                  <div style={{ backgroundColor: '#0f2952', padding: '18px', borderRadius: '10px', border: '1px solid #1e3a8a' }}>
+                    <span style={{ fontSize: '10px', color: '#93c5fd', fontWeight: '800', textTransform: 'uppercase' }}>Transport Basket Weight</span>
+                    <h2 style={{ margin: '6px 0 2px 0', fontSize: '26px', fontWeight: '900', color: '#ffffff' }}>{govtData.macro_cpi_metrics.transport_basket_weight}</h2>
+                    <span style={{ fontSize: '11px', color: '#fbbf24', fontWeight: '600' }}>Official MoSPI Allocation</span>
                   </div>
-                  <div style={{ backgroundColor: '#1e3a8a', padding: '18px', borderRadius: '10px' }}>
-                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: '700', textTransform: 'uppercase' }}>Inflation Impact</span>
-                    <h2 style={{ margin: '6px 0 0 0', fontSize: '28px', fontWeight: '900', color: '#f87171' }}>+{govtData.macro_cpi_metrics.national_inflation_impact_pct}%</h2>
-                    <span style={{ fontSize: '11px', color: '#fca5a5' }}>Upward Pressure</span>
+                  <div style={{ backgroundColor: '#0f2952', padding: '18px', borderRadius: '10px', border: '1px solid #1e3a8a' }}>
+                    <span style={{ fontSize: '10px', color: '#93c5fd', fontWeight: '800', textTransform: 'uppercase' }}>Inflation Impact</span>
+                    <h2 style={{ margin: '6px 0 2px 0', fontSize: '26px', fontWeight: '900', color: '#f87171' }}>+{govtData.macro_cpi_metrics.national_inflation_impact_pct}%</h2>
+                    <span style={{ fontSize: '11px', color: '#fca5a5', fontWeight: '600' }}>Upward Pressure</span>
                   </div>
                 </div>
               </div>
 
+              {/* RELATIVE IMPORTANCE TABLE (BLS STYLE) */}
+              <div style={{ backgroundColor: '#ffffff', padding: '24px 30px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '900', color: '#001e43' }}>Table A. Relative Importance of Transport & Airfare Components (Current Year)</h3>
+                <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#64748b' }}>The relative importance of an item category reflects its percent of the total CPI weight.</p>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #cbd5e1', color: '#475569', backgroundColor: '#f1f5f9' }}>
+                      <th style={{ padding: '10px' }}>Item Category</th>
+                      <th style={{ padding: '10px' }}>Relative Importance Weight (%)</th>
+                      <th style={{ padding: '10px' }}>Impact Factor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '10px', fontWeight: '700', color: '#001e43' }}>Public Transportation & Air Fares</td>
+                      <td style={{ padding: '10px', color: '#0284c7', fontWeight: '800' }}>{govtData.macro_cpi_metrics.transport_basket_weight}</td>
+                      <td style={{ padding: '10px', color: '#16a34a', fontWeight: '700' }}>High Dynamic Sensitivity</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '10px', fontWeight: '700', color: '#001e43' }}>Domestic Intercity Corridors</td>
+                      <td style={{ padding: '10px', color: '#334155' }}>5.82%</td>
+                      <td style={{ padding: '10px', color: '#d97706', fontWeight: '700' }}>Moderate Surge</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
               {/* DYNAMIC MASTER CPI GRAPH WITH TIMEFRAME SELECTOR */}
-              <div style={{ backgroundColor: '#ffffff', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '28px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
+              <div style={{ backgroundColor: '#ffffff', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#00205b' }}>📈 Dynamic Master CPI Trend & Analytics Graph</h3>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#001e43' }}>📈 Dynamic Master CPI Trend & Analytics Graph</h3>
                     <span style={{ fontSize: '12px', color: '#64748b' }}>Interactive timeframe view for live MoSPI transport inflation monitoring</span>
                   </div>
                   <div style={{ display: 'flex', gap: '6px', backgroundColor: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
@@ -281,7 +195,7 @@ export default function App() {
                           padding: '8px 14px',
                           borderRadius: '6px',
                           border: 'none',
-                          backgroundColor: cpiTimeframe === tf ? '#00205b' : 'transparent',
+                          backgroundColor: cpiTimeframe === tf ? '#001e43' : 'transparent',
                           color: cpiTimeframe === tf ? '#ffffff' : '#475569',
                           fontWeight: '800',
                           fontSize: '12px',
@@ -310,14 +224,14 @@ export default function App() {
 
                       return (
                         <>
-                          <polyline fill="none" stroke="#00205b" strokeWidth="4" points={points} />
+                          <polyline fill="none" stroke="#001e43" strokeWidth="4" points={points} />
                           {activeDataset.map((d, idx) => {
                             const x = 70 + (idx * (700 / (activeDataset.length - 1)));
                             const y = 230 - ((d.val - 110) * 8);
                             return (
                               <g key={idx}>
                                 <circle cx={x} cy={y} r="6" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
-                                <text x={x} y={y - 12} textAnchor="middle" fill="#00205b" fontSize="11" fontWeight="bold">
+                                <text x={x} y={y - 12} textAnchor="middle" fill="#001e43" fontSize="11" fontWeight="bold">
                                   {d.val}
                                 </text>
                                 <text x={x} y="250" textAnchor="middle" fill="#64748b" fontSize="11" fontWeight="600">
@@ -333,9 +247,9 @@ export default function App() {
                 </div>
               </div>
 
-              {/* ADDITIONAL GOVERNMENT FEATURES: ROUTE HEATMAPS & SEAT AVAILABILITY */}
-              <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '17px', fontWeight: '900', color: '#00205b' }}>🗺️ Route-Wise Prices, Inflation % & Seat Availability Weighting</h3>
+              {/* ROUTE-WISE PRICES & SEAT AVAILABILITY */}
+              <div style={{ backgroundColor: '#ffffff', padding: '24px 30px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '17px', fontWeight: '900', color: '#001e43' }}>🗺️ Route-Wise Prices, Inflation % & Seat Availability Weighting</h3>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', backgroundColor: '#f8fafc' }}>
@@ -349,7 +263,7 @@ export default function App() {
                   <tbody>
                     {govtData.route_wise_analysis.map((rt, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '10px', fontWeight: '700', color: '#00205b' }}>{rt.route}</td>
+                        <td style={{ padding: '10px', fontWeight: '700', color: '#001e43' }}>{rt.route}</td>
                         <td style={{ padding: '10px', color: '#64748b' }}>₹{rt.avg_fare}</td>
                         <td style={{ padding: '10px', color: rt.inflation_pct.startsWith('+') ? '#dc2626' : '#16a34a', fontWeight: '700' }}>{rt.inflation_pct}</td>
                         <td style={{ padding: '10px', color: '#0284c7', fontWeight: '600' }}>{rt.seat_availability} ({rt.fare_class})</td>
@@ -361,9 +275,9 @@ export default function App() {
               </div>
 
               {/* AUTOMATED COLLECTION & BOOKING WINDOWS */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '28px' }}>
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '900', color: '#00205b' }}>✈️ Automatic Multi-Source Collection (Airlines & OTAs)</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px 30px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '900', color: '#001e43' }}>✈️ Automatic Multi-Source Collection (Airlines & OTAs)</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
                     <div style={{ backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                       <strong>Airlines Active:</strong> IndiGo, Air India, Air India Express, Akasa Air, SpiceJet
@@ -374,8 +288,8 @@ export default function App() {
                   </div>
                 </div>
 
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '900', color: '#00205b' }}>⏳ Scheduled Booking Windows (T+1 to T+45)</h3>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px 30px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '900', color: '#001e43' }}>⏳ Scheduled Booking Windows (T+1 to T+45)</h3>
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', backgroundColor: '#f8fafc' }}>
@@ -387,7 +301,7 @@ export default function App() {
                     <tbody>
                       {govtData.booking_windows_analysis.map((bw, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '8px', fontWeight: '700', color: '#00205b' }}>{bw.window}</td>
+                          <td style={{ padding: '8px', fontWeight: '700', color: '#001e43' }}>{bw.window}</td>
                           <td style={{ padding: '8px', color: '#0284c7' }}>₹{bw.avg_fare}</td>
                           <td style={{ padding: '8px', color: '#d97706', fontWeight: '700' }}>{bw.surge_factor}</td>
                         </tr>
@@ -398,9 +312,9 @@ export default function App() {
               </div>
 
               {/* DATA CLEANING & BACKTESTING */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '28px' }}>
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '900', color: '#00205b' }}>🧹 Data Cleaning & Normalization Engine</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px 30px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '900', color: '#001e43' }}>🧹 Data Cleaning & Normalization Engine</h3>
                   <div style={{ fontSize: '13px', color: '#475569', lineHeight: '1.6' }}>
                     <p style={{ margin: '0 0 8px 0' }}>Raw feeds pass through automated outlier isolation to separate base fares, taxes, and convenience fees cleanly.</p>
                     <div style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontFamily: 'monospace', fontSize: '12px' }}>
@@ -409,8 +323,8 @@ export default function App() {
                   </div>
                 </div>
 
-                <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '900', color: '#00205b' }}>🧪 Backtesting Validation & Transparency</h3>
+                <div style={{ backgroundColor: '#ffffff', padding: '24px 30px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '900', color: '#001e43' }}>🧪 Backtesting Validation & Transparency</h3>
                   <div style={{ fontSize: '13px', color: '#475569', lineHeight: '1.6' }}>
                     <div><strong>MAPE Accuracy:</strong> {govtData.backtesting_validation.mape}</div>
                     <div><strong>RMSE Score:</strong> {govtData.backtesting_validation.rmse}</div>
@@ -419,8 +333,8 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Active Alerts */}
-              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '20px', marginBottom: '28px' }}>
+              {/* ACTIVE ALERTS */}
+              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px' }}>
                 <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', color: '#991b1b', fontWeight: '900' }}>🚨 Automated Surge & Anomaly Alerts</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {govtData.active_alerts.map((al, idx) => (
@@ -437,40 +351,67 @@ export default function App() {
     );
   }
 
-  // --- CONSUMER PORTAL (UNALTERED MULTI-SOURCE COMPARISON ENGINE) ---
+  // --- CONSUMER PORTAL (FLIGHTAPI STYLE HERO & COMPARISON ENGINE) ---
   return (
-    <div style={{ backgroundColor: '#f8fafc', color: '#00205b', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ backgroundColor: '#f8fafc', color: '#0f172a', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
       
-      <div style={{ backgroundColor: '#00205b', color: '#ffffff', padding: '16px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <AeroclickLogo size={42} />
+      {/* FlightAPI Style Top Navigation Bar */}
+      <div style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <AeroclickLogo size={44} />
           <div>
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '900', letterSpacing: '0.5px' }}>AEROCLICK // CONSUMER AIRFARE PORTAL</h2>
-            <span style={{ fontSize: '12px', color: '#38bdf8' }}>Cross-Platform Multi-Source Fare Comparison & AI Predictor</span>
+            <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: '800', letterSpacing: '0.5px' }}>SMART INDIA HACKATHON 2026 | ID 26056</div>
+            <h2 style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: '900', color: '#001e43' }}>AEROCLICK // CONSUMER FLIGHT API</h2>
           </div>
         </div>
-        <button onClick={() => setAuthRole(null)} style={{ backgroundColor: '#dc2626', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}>
-          Logout Portal
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>Trusted by 8,000+ developers & travelers</span>
+          <button 
+            onClick={() => setActivePortal('govt')} 
+            style={{ backgroundColor: '#001e43', color: 'white', border: 'none', padding: '9px 18px', borderRadius: '6px', cursor: 'pointer', fontWeight: '800', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,30,67,0.2)' }}
+          >
+            Switch to MoSPI Officer Portal →
+          </button>
+        </div>
       </div>
 
+      {/* FlightAPI Inspired Hero Section */}
       <div style={{ 
-        backgroundImage: 'linear-gradient(rgba(0, 32, 91, 0.85), rgba(0, 16, 48, 0.9)), url("https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=1600&auto=format&fit=crop")',
+        backgroundImage: 'linear-gradient(rgba(0, 30, 67, 0.92), rgba(0, 15, 35, 0.95)), url("https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?q=80&w=1600&auto=format&fit=crop")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         color: '#ffffff',
-        padding: '50px 36px',
+        padding: '80px 40px 100px 40px',
         textAlign: 'center'
       }}>
-        <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '900' }}>Instant Multi-Platform Flight Price Comparison</h1>
-        <p style={{ margin: '10px 0 0 0', fontSize: '15px', color: '#cbd5e1' }}>Compare direct airline websites and all major OTAs (MMT, Yatra, EaseMyTrip, Cleartrip, Ixigo, Goibibo) in one click.</p>
+        <div style={{ display: 'inline-block', backgroundColor: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: '800', marginBottom: '16px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+          ✈️ Real-Time Flight Data API & Comparison Engine
+        </div>
+        <h1 style={{ margin: '0 auto', maxWidth: '900px', fontSize: '42px', fontWeight: '900', letterSpacing: '-0.5px', lineHeight: '1.2' }}>
+          Flight Data API for Real-Time Price Comparison, Status and Schedules
+        </h1>
+        <p style={{ margin: '16px auto 0 auto', maxWidth: '750px', fontSize: '16px', color: '#cbd5e1', lineHeight: '1.6' }}>
+          Aeroclick is a fast and flexible solution for travelers and businesses that need real-time, accurate flight data across all airlines and OTAs instantly.
+        </p>
+
+        {/* Stats Pills */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', marginTop: '35px' }}>
+          <div style={{ backgroundColor: 'rgba(255,255,255,0.08)', padding: '12px 24px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)' }}>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: '#38bdf8' }}>8,000+</h3>
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>Daily searches powered</span>
+          </div>
+          <div style={{ backgroundColor: 'rgba(255,255,255,0.08)', padding: '12px 24px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)' }}>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: '#34d399' }}>700+</h3>
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>Global Airlines & OTAs</span>
+          </div>
+        </div>
       </div>
 
-      <div style={{ padding: '36px', maxWidth: '1280px', margin: '0 auto' }}>
+      <div style={{ padding: '0 36px 50px 36px', maxWidth: '1280px', margin: '-40px auto 0 auto', position: 'relative', zIndex: 10 }}>
         
         {/* CROSS-PLATFORM COMPARISON WIDGET */}
-        <div style={{ backgroundColor: '#ffffff', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '28px', boxShadow: '0 4px 12px rgba(0,32,91,0.08)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '900', color: '#00205b' }}>🔍 Instant Cross-Platform Fare Comparison Engine</h3>
+        <div style={{ backgroundColor: '#ffffff', padding: '32px', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '28px', boxShadow: '0 20px 40px rgba(0,30,67,0.08)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '900', color: '#001e43' }}>🔍 Instant Cross-Platform Fare Comparison Engine (All Airlines & OTAs)</h3>
           
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div>
@@ -480,7 +421,7 @@ export default function App() {
                 value={compOrigin} 
                 onChange={(e) => setCompOrigin(e.target.value)} 
                 placeholder="e.g. Delhi"
-                style={{ backgroundColor: '#f8fafc', color: '#00205b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '180px', outline: 'none', fontSize: '14px', fontWeight: '600' }} 
+                style={{ backgroundColor: '#f8fafc', color: '#001e43', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '180px', outline: 'none', fontSize: '14px', fontWeight: '600' }} 
               />
             </div>
             <div>
@@ -490,7 +431,7 @@ export default function App() {
                 value={compDest} 
                 onChange={(e) => setCompDest(e.target.value)} 
                 placeholder="e.g. Goa"
-                style={{ backgroundColor: '#f8fafc', color: '#00205b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '180px', outline: 'none', fontSize: '14px', fontWeight: '600' }} 
+                style={{ backgroundColor: '#f8fafc', color: '#001e43', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '180px', outline: 'none', fontSize: '14px', fontWeight: '600' }} 
               />
             </div>
             <div>
@@ -499,10 +440,10 @@ export default function App() {
                 type="date" 
                 value={compDate} 
                 onChange={(e) => setCompDate(e.target.value)} 
-                style={{ backgroundColor: '#f8fafc', color: '#00205b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '160px', outline: 'none', fontSize: '14px', fontWeight: '600' }} 
+                style={{ backgroundColor: '#f8fafc', color: '#001e43', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '160px', outline: 'none', fontSize: '14px', fontWeight: '600' }} 
               />
             </div>
-            <button onClick={runComparison} style={{ backgroundColor: '#00205b', color: 'white', border: 'none', padding: '14px 26px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', marginTop: '18px', fontSize: '14px', boxShadow: '0 4px 12px rgba(0,32,91,0.2)' }}>
+            <button onClick={runComparison} style={{ backgroundColor: '#001e43', color: 'white', border: 'none', padding: '14px 26px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', marginTop: '18px', fontSize: '14px', boxShadow: '0 4px 12px rgba(0,30,67,0.2)' }}>
               Compare All Platforms →
             </button>
           </div>
@@ -520,7 +461,7 @@ export default function App() {
                 </div>
               </div>
 
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '900', color: '#00205b' }}>📊 Real-Time Unbundled Comparison Table</h4>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '900', color: '#001e43' }}>📊 Real-Time Unbundled Comparison Table (Airlines vs OTAs)</h4>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                   <thead>
@@ -537,7 +478,7 @@ export default function App() {
                   <tbody>
                     {comparisonResult.price_comparison.map((item, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: item.best_deal ? '#f0fdf4' : 'transparent' }}>
-                        <td style={{ padding: '12px', fontWeight: '800', color: '#00205b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <td style={{ padding: '12px', fontWeight: '800', color: '#001e43', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {item.provider} {item.best_deal && <span style={{ backgroundColor: '#16a34a', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '900' }}>BEST DEAL</span>}
                         </td>
                         <td style={{ padding: '12px', color: '#64748b' }}>{item.type}</td>
@@ -556,8 +497,8 @@ export default function App() {
         </div>
 
         {/* AI FARE PREDICTOR */}
-        <div style={{ backgroundColor: '#ffffff', padding: '28px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '28px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '900', color: '#00205b' }}>🤖 Universal AI Fare Predictor & Trend Forecaster</h3>
+        <div style={{ backgroundColor: '#ffffff', padding: '28px 32px', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '28px', boxShadow: '0 10px 25px rgba(0,30,67,0.05)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '900', color: '#001e43' }}>🤖 Universal AI Fare Predictor & Trend Forecaster</h3>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Origin City</label>
@@ -566,7 +507,7 @@ export default function App() {
                 value={predOrigin} 
                 onChange={(e) => setPredOrigin(e.target.value)} 
                 placeholder="e.g. Delhi"
-                style={{ backgroundColor: '#f8fafc', color: '#00205b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '180px', outline: 'none', fontSize: '14px', fontWeight: '600' }} 
+                style={{ backgroundColor: '#f8fafc', color: '#001e43', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '180px', outline: 'none', fontSize: '14px', fontWeight: '600' }} 
               />
             </div>
             <div>
@@ -576,22 +517,22 @@ export default function App() {
                 value={predDest} 
                 onChange={(e) => setPredDest(e.target.value)} 
                 placeholder="e.g. Goa"
-                style={{ backgroundColor: '#f8fafc', color: '#00205b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '180px', outline: 'none', fontSize: '14px', fontWeight: '600' }} 
+                style={{ backgroundColor: '#f8fafc', color: '#001e43', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '180px', outline: 'none', fontSize: '14px', fontWeight: '600' }} 
               />
             </div>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Days Ahead</label>
-              <input type="number" value={predDays} onChange={(e) => setPredDays(e.target.value)} style={{ width: '90px', backgroundColor: '#f8fafc', color: '#00205b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', fontWeight: '600' }} />
+              <input type="number" value={predDays} onChange={(e) => setPredDays(e.target.value)} style={{ width: '90px', backgroundColor: '#f8fafc', color: '#001e43', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '14px', fontWeight: '600' }} />
             </div>
-            <button onClick={runAIPrediction} style={{ backgroundColor: '#00205b', color: 'white', border: 'none', padding: '14px 24px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', marginTop: '18px', fontSize: '14px', boxShadow: '0 4px 12px rgba(0,32,91,0.2)' }}>
+            <button onClick={runAIPrediction} style={{ backgroundColor: '#001e43', color: 'white', border: 'none', padding: '14px 24px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', marginTop: '18px', fontSize: '14px', boxShadow: '0 4px 12px rgba(0,30,67,0.2)' }}>
               Calculate AI Forecast →
             </button>
           </div>
 
           {aiResult && (
-            <div style={{ marginTop: '22px', backgroundColor: '#f8fafc', padding: '18px 22px', borderRadius: '8px', borderLeft: '5px solid #00205b', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ marginTop: '22px', backgroundColor: '#f8fafc', padding: '18px 22px', borderRadius: '8px', borderLeft: '5px solid #001e43', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div>
-                <strong style={{ fontSize: '16px', color: '#00205b' }}>{aiResult.route} ({aiResult.forecast_horizon_days} Days Out)</strong>
+                <strong style={{ fontSize: '16px', color: '#001e43' }}>{aiResult.route} ({aiResult.forecast_horizon_days} Days Out)</strong>
                 <div style={{ fontSize: '14px', color: '#0284c7', marginTop: '6px', fontWeight: '700' }}>Predicted Corridor: <strong>{aiResult.predicted_fare_range}</strong></div>
               </div>
               <div style={{ textAlign: 'right' }}>
