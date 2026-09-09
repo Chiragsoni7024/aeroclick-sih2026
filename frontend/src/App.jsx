@@ -38,7 +38,7 @@ export default function App() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    fetch('http://127.0.0.1:8000/api/auth/login', {
+    fetch('http://127.0.0.1:/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password, role: selectedRoleType })
@@ -56,28 +56,28 @@ export default function App() {
 
   useEffect(() => {
     if (authRole === 'govt') {
-      fetch(`http://127.0.0.1:8000/api/terminal/government-analytics?destination=${selectedDestination}`)
+      fetch(`http://127.0.0.1:/api/terminal/government-analytics?destination=${selectedDestination}`)
         .then(res => res.json())
         .then(d => setGovtData(d));
     } else if (authRole === 'consumer') {
-      fetch('http://127.0.0.1:8000/api/terminal/consumer-market')
+      fetch('http://127.0.0.1:/api/terminal/consumer-market')
         .then(res => res.json())
         .then(d => setConsumerData(d));
 
-      fetch('http://127.0.0.1:8000/api/terminal/records?limit=25')
+      fetch('http://127.0.0.1:/api/terminal/records?limit=25')
         .then(res => res.json())
         .then(r => setFlightRecords(r));
     }
   }, [authRole, selectedDestination]);
 
   const runComparison = () => {
-    fetch(`http://127.0.0.1:8000/api/consumer/compare-fares?origin=${compOrigin}&destination=${compDest}&travel_date=${compDate}`)
+    fetch(`http://127.0.0.1:/api/consumer/compare-fares?origin=${compOrigin}&destination=${compDest}&travel_date=${compDate}`)
       .then(res => res.json())
       .then(d => setComparisonResult(d));
   };
 
   const runAIPrediction = () => {
-    fetch(`http://127.0.0.1:8000/api/ai/predict?origin=${predOrigin}&destination=${predDest}&days_ahead=${predDays}`)
+    fetch(`http://127.0.0.1:/api/ai/predict?origin=${predOrigin}&destination=${predDest}&days_ahead=${predDays}`)
       .then(res => res.json())
       .then(d => setAiResult(d));
   };
