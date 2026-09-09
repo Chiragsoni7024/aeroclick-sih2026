@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from models import get_db, engine, Base, AirfareRecord, User
+from database import get_db, engine, Base
+from models import AirfareRecord, User, IndexHistory, PredictionLog, PriceAlert
 import numpy as np
 
 Base.metadata.create_all(bind=engine)
