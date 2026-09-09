@@ -1,29 +1,38 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime
-from database import Base
-import datetime
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import logging
 
-class AirfareRecord(Base):
-    __tablename__ = "airfare_records"
+# Configure logging for database operations
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    id = Column(Integer, primary_key=True, index=True)
-    origin = Column(String, index=True)
-    destination = Column(String, index=True)
-    airline = Column(String, index=True)
-    flight_number = Column(String)
-    base_fare = Column(Float)
-    taxes = Column(Float)
-    convenience_fee = Column(Float)
-    total_fare = Column(Float)
-    seat_availability_pct = Column(Float)
-    fare_class = Column(String)
-    source_portal = Column(String)
-    is_outlier = Column(Boolean, default=False)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+# SQLite Database URL for production & local stability
+SQLALCHEMY_DATABASE_URL = "sqlite:///./AEROCLICK_DB.db"
 
-class User(Base):
-    __tablename__ = "users"
+# Create engine with thread safety and connection health checks enabled
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    pool_pre_ping=True
+)
 
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    role = Column(String)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+def get_db():
+    """
+    Provides a database session for API endpoints, 
+    ensuring connections are safely opened and closed.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    except Exception as e:
+        logger.error(f"Database session error: {e}")
+        raise
+    finally:
+        db.close()
+
+logger.info("Successfully initialized SQLite Database connection configuration.")
